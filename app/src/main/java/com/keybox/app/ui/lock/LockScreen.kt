@@ -66,17 +66,17 @@ fun LockScreen(appViewModel: AppViewModel) {
             Spacer(Modifier.height(24.dp))
             OutlinedButton(
                 onClick = {
-                    val activity = context as? FragmentActivity ?: return@OutlinedButton
+                    val activity = context.findFragmentActivity() ?: return@OutlinedButton
                     BiometricHelper.showPrompt(
                         activity = activity,
                         title = "解锁 KeyBox",
                         subtitle = "使用指纹或面部识别解锁",
                         onSuccess = {
-                            if (!appViewModel.biometricUnlock()) {
-                                // 解密失败（密钥失效或数据损坏），回退主密码
-                            }
+                            appViewModel.biometricUnlock()
                         },
-                        onError = { }
+                        onError = { err ->
+                            appViewModel.showMessage(err)
+                        }
                     )
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp)
@@ -85,4 +85,14 @@ fun LockScreen(appViewModel: AppViewModel) {
             }
         }
     }
+}
+
+/** 解包 Context 找到 FragmentActivity（可能被 ContextWrapper 包装）。 */
+private fun android.content.Context.findFragmentActivity(): FragmentActivity? {
+    var ctx: android.content.Context? = this
+    while (ctx != null) {
+        if (ctx is FragmentActivity) return ctx
+        ctx = if (ctx is android.content.ContextWrapper) ctx.baseContext else null
+    }
+    return null
 }

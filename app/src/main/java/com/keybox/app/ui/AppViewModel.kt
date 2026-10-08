@@ -55,6 +55,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearMessage() { _message.value = null }
 
+    fun showMessage(msg: String) { _message.value = msg }
+
     // ===== 临时挂起后台锁定（用于文件选择器等外部 Activity） =====
 
     private var suspendAutoLockCount = 0
@@ -183,7 +185,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * @return 是否成功还原 DEK
      */
     fun biometricUnlock(): Boolean {
-        val dek = biometricKeyManager.decryptDek() ?: return false
+        val dek = biometricKeyManager.decryptDek()
+        if (dek == null) {
+            _message.value = "生物识别解锁失败，请使用主密码"
+            return false
+        }
         crypto.setDek(dek)
         dek.fill(0)
         _state.value = AppState.Unlocked

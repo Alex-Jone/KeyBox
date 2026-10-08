@@ -85,6 +85,7 @@ dependencies {
 
     // Biometric
     implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.fragment:fragment-ktx:1.8.2")
 
     // Crypto: Argon2id（BouncyCastle 纯 Java 实现，Android 可用）+ AES-GCM
     implementation("org.bouncycastle:bcprov-jdk15on:1.70")
