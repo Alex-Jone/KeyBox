@@ -37,6 +37,7 @@ fun SettingsScreen(
     var biometricEnabled by remember { mutableStateOf(appViewModel.biometricEnabled()) }
     var autofillEnabled by remember { mutableStateOf(appViewModel.autofillEnabled()) }
 
+    val lastBackupAt by appViewModel.lastBackupAt.collectAsState()
     val biometricSupported = appViewModel.biometricAvailable(context)
 
     Scaffold(
@@ -76,7 +77,8 @@ fun SettingsScreen(
                 Column(Modifier.padding(16.dp)) {
                     Text("备份与迁移", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
-                    val daysSince = appViewModel.daysSinceBackup()
+                    val daysSince = if (lastBackupAt == 0L) null
+                        else ((System.currentTimeMillis() - lastBackupAt) / (24 * 60 * 60 * 1000L)).toInt()
                     Text(
                         when {
                             daysSince == null -> "尚未备份，建议尽快导出备份"

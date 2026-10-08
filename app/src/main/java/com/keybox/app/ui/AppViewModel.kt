@@ -57,6 +57,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun showMessage(msg: String) { _message.value = msg }
 
+    /** 上次备份时间（毫秒）。0 表示从未备份。响应式，供设置页实时刷新。 */
+    private val _lastBackupAt = MutableStateFlow(backupPrefs.getLong("last_backup_at", 0L))
+    val lastBackupAt: StateFlow<Long> = _lastBackupAt.asStateFlow()
+
     // ===== 临时挂起后台锁定（用于文件选择器等外部 Activity） =====
 
     private var suspendAutoLockCount = 0
@@ -237,7 +241,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** 记录备份完成时间。 */
     fun recordBackupDone() {
-        backupPrefs.edit().putLong("last_backup_at", System.currentTimeMillis()).apply()
+        val now = System.currentTimeMillis()
+        backupPrefs.edit().putLong("last_backup_at", now).apply()
+        _lastBackupAt.value = now
     }
 
     /** 距上次备份的天数。null 表示从未备份。 */

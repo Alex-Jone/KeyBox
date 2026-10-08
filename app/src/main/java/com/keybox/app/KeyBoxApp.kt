@@ -17,6 +17,22 @@ class KeyBoxApp : Application() {
     lateinit var repository: PasswordRepository
         private set
 
+    /** 崩溃日志目录（无 adb 时用于诊断闪退）。 */
+    fun crashLogDir(): File = File(filesDir, "crash_logs").apply { mkdirs() }
+
+    /** 读取全部崩溃日志内容（按时间升序拼接）。 */
+    fun readCrashLogs(): String {
+        val dir = crashLogDir()
+        val files = dir.listFiles()?.sortedBy { it.name } ?: emptyList()
+        if (files.isEmpty()) return ""
+        return buildString {
+            files.forEach { f ->
+                append("===== ").append(f.name).append(" =====\n")
+                append(f.readText()).append('\n')
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         installCrashLogger()

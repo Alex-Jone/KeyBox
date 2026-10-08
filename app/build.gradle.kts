@@ -22,8 +22,8 @@ android {
         applicationId = "com.keybox.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "0.2.4"
+        versionCode = 4
+        versionName = "0.2.5"
     }
 
     signingConfigs {
@@ -92,6 +92,10 @@ dependencies {
 
     // JSON
     implementation("org.json:json:20240303")
+
+    // Excel 解析（Apache POI：.xlsx / .xls 导入）
+    implementation("org.apache.poi:poi:5.2.5")
+    implementation("org.apache.poi:poi-ooxml:5.2.5")
 
     // Security (optional, EncryptedSharedPreferences for DEK wrap)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")

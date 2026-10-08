@@ -14,10 +14,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.keybox.app.domain.SecurityAnalyzer
 import com.keybox.app.ui.AppViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,6 +31,34 @@ fun SecurityCenterScreen(
 ) {
     val items by appViewModel.repository.observeActiveItems().collectAsState(initial = emptyList())
     val report = remember(items) { SecurityAnalyzer.analyze(items) }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var diagStatus by remember { mutableStateOf<String?>(null) }
+    var showLogs by remember { mutableStateOf(false) }
+
+    // 导出崩溃日志
+    val exportLog = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri: android.net.Uri? ->
+        appViewModel.resumeAutoLock()
+        if (uri != null) {
+            scope.launch {
+                try {
+                    val app = context.applicationContext as com.keybox.app.KeyBoxApp
+                    val logs = app.readCrashLogs()
+                    if (logs.isEmpty()) {
+                        diagStatus = "暂无崩溃日志"
+                    } else {
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(logs.toByteArray()) }
+                        diagStatus = "日志已导出"
+                    }
+                } catch (e: Exception) {
+                    diagStatus = "导出失败：${e.message}"
+                }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -124,6 +156,50 @@ fun SecurityCenterScreen(
                 color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
+
+            Spacer(Modifier.height(24.dp))
+
+            // ===== 诊断日志 =====
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+            Text("诊断日志", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "若应用闪退，可导出崩溃日志用于排查。日志仅含错误堆栈，不含任何密码明文。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { showLogs = !showLogs }) {
+                    Text(if (showLogs) "隐藏日志" else "查看日志")
+                }
+                OutlinedButton(
+                    onClick = {
+                        appViewModel.suspendAutoLock()
+                        exportLog.launch("keybox-crash-log-${System.currentTimeMillis()}.txt")
+                    }
+                ) {
+                    Text("导出日志")
+                }
+            }
+            if (showLogs) {
+                val app = context.applicationContext as com.keybox.app.KeyBoxApp
+                val logs = remember { app.readCrashLogs() }
+                Spacer(Modifier.height(8.dp))
+                Card(Modifier.fillMaxWidth()) {
+                    Text(
+                        if (logs.isEmpty()) "暂无崩溃日志" else logs,
+                        Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    )
+                }
+            }
+            diagStatus?.let {
+                Spacer(Modifier.height(8.dp))
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+            }
         }
     }
 }

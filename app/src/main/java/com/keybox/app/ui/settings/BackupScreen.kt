@@ -18,6 +18,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.keybox.app.data.backup.CsvImporter
 import com.keybox.app.data.backup.KbxFormat
+import com.keybox.app.data.backup.TextTableImporter
 import com.keybox.app.data.repository.PasswordRepository
 import com.keybox.app.ui.AppViewModel
 import kotlinx.coroutines.launch
@@ -113,6 +114,70 @@ fun BackupScreen(
         }
     }
 
+    // 导入 TXT
+    val pickTxt = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        appViewModel.resumeAutoLock()
+        if (uri != null) {
+            scope.launch {
+                status = "正在导入 TXT..."
+                try {
+                    val text = context.contentResolver.openInputStream(uri)?.bufferedReader()?.readText()
+                    if (text == null) {
+                        status = "无法读取文件"
+                    } else {
+                        val entities = TextTableImporter.parseTxt(text, (context as com.keybox.app.KeyBoxApp).crypto)
+                        if (entities.isEmpty()) {
+                            status = "TXT 导入失败：未识别到有效记录。请确认格式为「字段:值」逐行（如 name:/username:/password:），空行分隔不同记录。"
+                        } else {
+                            val result = appViewModel.repository.importAll(
+                                entities, emptyList(),
+                                PasswordRepository.ImportMode.MERGE
+                            )
+                            status = "TXT 导入成功：新增 ${result.added} 条。请删除源 TXT 文件。"
+                        }
+                    }
+                } catch (e: Exception) {
+                    status = "TXT 导入失败：${e.message}"
+                }
+            }
+        }
+    }
+
+    // 导入 Excel
+    val pickExcel = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        appViewModel.resumeAutoLock()
+        if (uri != null) {
+            scope.launch {
+                status = "正在导入 Excel..."
+                try {
+                    val input = context.contentResolver.openInputStream(uri)
+                    if (input == null) {
+                        status = "无法读取文件"
+                    } else {
+                        val entities = input.use {
+                            TextTableImporter.parseExcel(it, (context as com.keybox.app.KeyBoxApp).crypto)
+                        }
+                        if (entities.isEmpty()) {
+                            status = "Excel 导入失败：未识别到有效记录。请确认首行为表头，且包含「密码」或「账号」列。"
+                        } else {
+                            val result = appViewModel.repository.importAll(
+                                entities, emptyList(),
+                                PasswordRepository.ImportMode.MERGE
+                            )
+                            status = "Excel 导入成功：新增 ${result.added} 条。请删除源 Excel 文件。"
+                        }
+                    }
+                } catch (e: Exception) {
+                    status = "Excel 导入失败：${e.message}"
+                }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -187,6 +252,42 @@ fun BackupScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("选择 CSV 文件")
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            // ===== 导入 TXT =====
+            Text("从 TXT 导入", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "支持「字段:值」逐行格式（name:/url:/username:/password:/email:/phone:/notes:），空行分隔不同记录。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { appViewModel.suspendAutoLock(); pickTxt.launch(arrayOf("text/plain", "*/*")) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("选择 TXT 文件")
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            // ===== 导入 Excel =====
+            Text("从 Excel 导入", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "支持 .xlsx / .xls，首行为表头，按列名（名称/网址/账号/密码/邮箱/手机/备注）自动匹配。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { appViewModel.suspendAutoLock(); pickExcel.launch(arrayOf("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel", "application/octet-stream", "*/*")) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("选择 Excel 文件")
             }
 
             status?.let {
