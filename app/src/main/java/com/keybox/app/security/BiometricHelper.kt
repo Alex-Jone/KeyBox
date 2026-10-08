@@ -40,18 +40,30 @@ object BiometricHelper {
                 }
             }
         )
+
         val builder = BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
             .setSubtitle(subtitle)
-            .setNegativeButtonText("取消")
+
         if (cipher != null) {
-            builder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
-        }
-        val info = builder.build()
-        if (cipher != null) {
-            prompt.authenticate(info, BiometricPrompt.CryptoObject(cipher))
+            // Keystore 绑定的认证：必须用 STRONG 且不能设置负按钮，
+            // 否则会抛异常（setAllowedAuthenticators 与 setNegativeButtonText 冲突）
+            builder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
         } else {
-            prompt.authenticate(info)
+            builder.setNegativeButtonText("取消")
+        }
+
+        val info = builder.build()
+        try {
+            if (cipher != null) {
+                prompt.authenticate(info, BiometricPrompt.CryptoObject(cipher))
+            } else {
+                prompt.authenticate(info)
+            }
+        } catch (e: Exception) {
+            // 认证启动失败（如密钥与认证器不匹配、设备不支持强生物识别等），
+            // 不崩溃，交由调用方处理（回退主密码）
+            onError(e.message ?: "生物识别不可用")
         }
     }
 }
