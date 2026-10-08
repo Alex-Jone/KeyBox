@@ -163,11 +163,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * 启用生物识别解锁。
      * 在已解锁状态下，用 Keystore 生物识别密钥加密 DEK 存盘。
+     * @return 是否成功
      */
-    fun enableBiometric() {
-        val dek = crypto.getDek() ?: return
-        biometricKeyManager.enable(dek)
+    fun enableBiometric(): Boolean {
+        val dek = crypto.getDek() ?: return false
+        val ok = biometricKeyManager.enable(dek)
         dek.fill(0)
+        if (!ok) _message.value = "启用生物识别失败，请重试"
+        return ok
     }
 
     /** 关闭生物识别解锁。 */
@@ -176,20 +179,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * 获取用于生物识别认证的 Cipher（Keystore 绑定）。
-     * 返回 null 表示密钥已失效，需要回退主密码。
-     */
-    fun getBiometricCipher(): javax.crypto.Cipher? {
-        if (!biometricKeyManager.isKeyValid()) return null
-        return biometricKeyManager.getCipherForAuth()
-    }
-
-    /**
-     * 生物识别认证成功后，用认证通过的 Cipher 解密 DEK。
+     * 生物识别认证成功后调用：解密 DEK 并解锁。
      * @return 是否成功还原 DEK
      */
-    fun biometricUnlockWithCipher(cipher: javax.crypto.Cipher): Boolean {
-        val dek = biometricKeyManager.decryptDek(cipher) ?: return false
+    fun biometricUnlock(): Boolean {
+        val dek = biometricKeyManager.decryptDek() ?: return false
         crypto.setDek(dek)
         dek.fill(0)
         _state.value = AppState.Unlocked

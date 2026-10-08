@@ -214,9 +214,17 @@ fun SettingsScreen(
                             Switch(
                                 checked = biometricEnabled,
                                 onCheckedChange = { checked ->
-                                    biometricEnabled = checked
-                                    if (checked) appViewModel.enableBiometric()
-                                    else appViewModel.disableBiometric()
+                                    if (checked) {
+                                        // 启用失败时回滚开关状态
+                                        if (appViewModel.enableBiometric()) {
+                                            biometricEnabled = true
+                                        } else {
+                                            biometricEnabled = false
+                                        }
+                                    } else {
+                                        appViewModel.disableBiometric()
+                                        biometricEnabled = false
+                                    }
                                 }
                             )
                         }

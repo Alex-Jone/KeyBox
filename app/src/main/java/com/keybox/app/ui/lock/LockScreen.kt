@@ -67,28 +67,17 @@ fun LockScreen(appViewModel: AppViewModel) {
             OutlinedButton(
                 onClick = {
                     val activity = context as? FragmentActivity ?: return@OutlinedButton
-                    // 获取 Keystore 绑定的认证 Cipher
-                    val cipher = appViewModel.getBiometricCipher()
-                    if (cipher == null) {
-                        // 密钥已失效（指纹变更），提示用主密码
-                        appViewModel.clearMessage()
-                    } else {
-                        BiometricHelper.showPrompt(
-                            activity = activity,
-                            title = "解锁 KeyBox",
-                            subtitle = "使用指纹或面部识别解锁",
-                            cipher = cipher,
-                            onSuccess = { result ->
-                                val authCipher = result.cryptoObject?.cipher
-                                if (authCipher != null) {
-                                    if (!appViewModel.biometricUnlockWithCipher(authCipher)) {
-                                        // 解密失败（密钥失效）
-                                    }
-                                }
-                            },
-                            onError = { }
-                        )
-                    }
+                    BiometricHelper.showPrompt(
+                        activity = activity,
+                        title = "解锁 KeyBox",
+                        subtitle = "使用指纹或面部识别解锁",
+                        onSuccess = {
+                            if (!appViewModel.biometricUnlock()) {
+                                // 解密失败（密钥失效或数据损坏），回退主密码
+                            }
+                        },
+                        onError = { }
+                    )
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp)
             ) {

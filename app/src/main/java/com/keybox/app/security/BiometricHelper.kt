@@ -5,13 +5,13 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import javax.crypto.Cipher
 
 /**
- * 生物识别管理器。
- * 支持两种模式：
- *   1. 无 cipher（仅确认身份，用于「纯快捷解锁」）
- *   2. 带 cipher（Keystore 绑定认证，认证通过后才能解密 DEK）
+ * 生物识别管理器（纯身份认证模式）。
+ *
+ * 解锁流程：BiometricPrompt 确认身份 → 认证成功后调用方用 Keystore 密钥解密 DEK。
+ * 不使用 CryptoObject，避免 setUserAuthenticationRequired 密钥在 enable 阶段
+ * 抛 UserNotAuthenticatedException 导致闪退。
  */
 object BiometricHelper {
 
@@ -25,15 +25,14 @@ object BiometricHelper {
         activity: FragmentActivity,
         title: String,
         subtitle: String,
-        cipher: Cipher? = null,
-        onSuccess: (BiometricPrompt.AuthenticationResult) -> Unit,
+        onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
         val executor = ContextCompat.getMainExecutor(activity)
         val prompt = BiometricPrompt(activity, executor,
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    onSuccess(result)
+                    onSuccess()
                 }
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     onError(errString.toString())
@@ -41,28 +40,15 @@ object BiometricHelper {
             }
         )
 
-        val builder = BiometricPrompt.PromptInfo.Builder()
+        val info = BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
             .setSubtitle(subtitle)
+            .setNegativeButtonText("取消")
+            .build()
 
-        if (cipher != null) {
-            // Keystore 绑定的认证：必须用 STRONG 且不能设置负按钮，
-            // 否则会抛异常（setAllowedAuthenticators 与 setNegativeButtonText 冲突）
-            builder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
-        } else {
-            builder.setNegativeButtonText("取消")
-        }
-
-        val info = builder.build()
         try {
-            if (cipher != null) {
-                prompt.authenticate(info, BiometricPrompt.CryptoObject(cipher))
-            } else {
-                prompt.authenticate(info)
-            }
+            prompt.authenticate(info)
         } catch (e: Exception) {
-            // 认证启动失败（如密钥与认证器不匹配、设备不支持强生物识别等），
-            // 不崩溃，交由调用方处理（回退主密码）
             onError(e.message ?: "生物识别不可用")
         }
     }
