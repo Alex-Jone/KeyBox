@@ -1,21 +1,38 @@
 package com.keybox.app.ui.home
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.keybox.app.security.ClipboardHelper
 import com.keybox.app.ui.AppViewModel
+import com.keybox.app.ui.components.AvatarColors
+import com.keybox.app.ui.theme.BrandBlue
+import com.keybox.app.ui.theme.BrandBlueGradientBottom
+import com.keybox.app.ui.theme.BrandBlueGradientTop
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,197 +79,290 @@ fun ItemDetailScreen(
         return
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(current.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") }
-                },
-                actions = {
-                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "编辑") }
-                }
-            )
-        }
-    ) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(
             Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())
-                .padding(16.dp)
         ) {
-            if (current.url.isNotEmpty()) {
-                FieldBlock("网站", current.url)
-            }
-            FieldBlock("用户名", current.username, copyable = true)
-            // 密码
-            Row(
-                Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // ===== 蓝色渐变头部：大头像 + 名称 =====
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(BrandBlueGradientTop, BrandBlueGradientBottom)
+                        )
+                    )
             ) {
-                Text("密码", Modifier.width(80.dp), color = MaterialTheme.colorScheme.secondary)
-                Text(
-                    if (showPassword) current.password else "••••••••••••••",
-                    Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                IconButton(onClick = { showPassword = !showPassword }) {
-                    Icon(
-                        if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        "显示/隐藏"
-                    )
-                }
-                IconButton(onClick = {
-                    ClipboardHelper.copy(context, "密码", current.password)
-                    scope.launch { }
-                }) {
-                    Icon(Icons.Default.ContentCopy, "复制密码")
-                }
-            }
-
-            // 2FA (TOTP) 动态验证码
-            if (current.totpSecret.isNotEmpty()) {
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("2FA 验证码", Modifier.width(80.dp), color = MaterialTheme.colorScheme.secondary)
-                    Text(
-                        totpCode,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        letterSpacing = androidx.compose.ui.unit.TextUnit(3f, androidx.compose.ui.unit.TextUnitType.Sp),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(onClick = {
-                        ClipboardHelper.copy(context, "2FA 验证码", totpCode)
-                    }) {
-                        Icon(Icons.Default.ContentCopy, "复制")
-                    }
-                    // 倒计时
-                    Text(
-                        "${totpRemaining}s",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (totpRemaining <= 5) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.secondary
-                    )
-                }
-            }
-
-            if (current.email.isNotEmpty()) {
-                FieldBlock("邮箱", current.email, copyable = true)
-            }
-            if (current.phone.isNotEmpty()) {
-                FieldBlock("手机号", current.phone, copyable = true)
-            }
-            if (current.notes.isNotEmpty()) {
-                FieldBlock("备注", current.notes)
-            }
-
-            // 标签
-            if (tags.isNotEmpty()) {
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("标签", Modifier.width(80.dp), color = MaterialTheme.colorScheme.secondary)
-                    androidx.compose.foundation.lazy.LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Column(Modifier.fillMaxWidth()) {
+                    // 顶栏
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        items(tags.size) { i ->
-                            AssistChip(
-                                onClick = {},
-                                label = { Text(tags[i].name) }
-                            )
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
+                        }
+                        Spacer(Modifier.weight(1f))
+                        IconButton(onClick = onEdit) {
+                            Icon(Icons.Default.Edit, "编辑", tint = Color.White)
                         }
                     }
-                }
-            }
-
-            // 密码历史
-            OutlinedButton(
-                onClick = {
-                    showHistory = !showHistory
-                    if (showHistory) {
-                        scope.launch {
-                            history = appViewModel.repository.getPasswordHistory(itemId)
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-            ) {
-                Icon(Icons.Default.History, null)
-                Spacer(Modifier.width(8.dp))
-                Text("密码历史")
-            }
-            if (showHistory) {
-                if (history.isEmpty()) {
-                    Text(
-                        "暂无历史记录",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                } else {
-                    history.forEach { (oldPwd, time) ->
-                        Row(
-                            Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    // 头像 + 名称
+                    Column(
+                        Modifier.fillMaxWidth().padding(bottom = 28.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(76.dp)
+                                .background(Color.White, CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                oldPwd,
-                                Modifier.weight(1f),
+                                current.name.take(1).uppercase(),
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = AvatarColors.colorFor(current.name)
+                            )
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            current.name,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        if (current.url.isNotEmpty()) {
+                            Text(
+                                current.url,
                                 style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.85f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Text(
-                                formatTime(time),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
-
-            // 删除
-            OutlinedButton(
-                onClick = {
-                    scope.launch {
-                        appViewModel.repository.moveToTrash(itemId)
-                        onBack()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                )
+            // ===== 字段卡片（上浮圆角） =====
+            Surface(
+                modifier = Modifier.fillMaxWidth().offset(y = (-16).dp),
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                color = MaterialTheme.colorScheme.background
             ) {
-                Icon(Icons.Default.Delete, null)
-                Spacer(Modifier.width(8.dp))
-                Text("移动到回收站")
+                Column(Modifier.padding(16.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color.White,
+                        shadowElevation = 1.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
+                            // 密码
+                            FieldRow(
+                                label = "密码",
+                                value = if (showPassword) current.password else "••••••••••••••"
+                            ) {
+                                IconButton(onClick = { showPassword = !showPassword }) {
+                                    Icon(
+                                        if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        "显示/隐藏",
+                                        tint = BrandBlue
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    ClipboardHelper.copy(context, "密码", current.password)
+                                }) {
+                                    Icon(Icons.Default.ContentCopy, "复制密码", tint = BrandBlue)
+                                }
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
+                            // 用户名
+                            FieldRow(label = "用户名", value = current.username, copyable = true)
+
+                            // 网站
+                            if (current.url.isNotEmpty()) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                                FieldRow(label = "网站", value = current.url)
+                            }
+
+                            // 2FA
+                            if (current.totpSecret.isNotEmpty()) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                                FieldRow(label = "2FA", value = totpCode) {
+                                    Text(
+                                        "${totpRemaining}s",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (totpRemaining <= 5) MaterialTheme.colorScheme.error
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(end = 4.dp)
+                                    )
+                                    IconButton(onClick = {
+                                        ClipboardHelper.copy(context, "2FA 验证码", totpCode)
+                                    }) {
+                                        Icon(Icons.Default.ContentCopy, "复制", tint = BrandBlue)
+                                    }
+                                }
+                            }
+
+                            // 邮箱
+                            if (current.email.isNotEmpty()) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                                FieldRow(label = "邮箱", value = current.email, copyable = true)
+                            }
+                            // 手机号
+                            if (current.phone.isNotEmpty()) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                                FieldRow(label = "手机号", value = current.phone, copyable = true)
+                            }
+                            // 备注
+                            if (current.notes.isNotEmpty()) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                                FieldRow(label = "备注", value = current.notes)
+                            }
+                        }
+                    }
+
+                    // 标签
+                    if (tags.isNotEmpty()) {
+                        Spacer(Modifier.height(12.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(tags.size) { i ->
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = BrandBlue.copy(alpha = 0.08f)
+                                ) {
+                                    Text(
+                                        "# ${tags[i].name}",
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        color = BrandBlue,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // 密码历史
+                    OutlinedButton(
+                        onClick = {
+                            showHistory = !showHistory
+                            if (showHistory && history.isEmpty()) {
+                                scope.launch {
+                                    history = appViewModel.repository.getPasswordHistory(itemId)
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.History, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("密码历史")
+                    }
+                    if (showHistory) {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color.White,
+                            shadowElevation = 1.dp,
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                        ) {
+                            Column(Modifier.padding(14.dp)) {
+                                if (history.isEmpty()) {
+                                    Text(
+                                        "暂无历史记录",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                } else {
+                                    history.forEach { (oldPwd, time) ->
+                                        Row(
+                                            Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                oldPwd,
+                                                Modifier.weight(1f),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                formatTime(time),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(20.dp))
+
+                    // 删除
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                appViewModel.repository.moveToTrash(itemId)
+                                onBack()
+                            }
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(Icons.Default.Delete, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("移动到回收站")
+                    }
+
+                    Spacer(Modifier.height(32.dp))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun FieldBlock(label: String, value: String, copyable: Boolean = false) {
+private fun FieldRow(
+    label: String,
+    value: String,
+    copyable: Boolean = false,
+    trailing: @Composable RowScope.() -> Unit = {}
+) {
     val context = LocalContext.current
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        Modifier.fillMaxWidth().padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, Modifier.width(80.dp), color = MaterialTheme.colorScheme.secondary)
-        Text(value, Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(
+            label,
+            Modifier.width(72.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Text(
+            value,
+            Modifier.weight(1f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.bodyLarge
+        )
         if (copyable) {
             IconButton(onClick = { ClipboardHelper.copy(context, label, value) }) {
-                Icon(Icons.Default.ContentCopy, "复制")
+                Icon(Icons.Default.ContentCopy, "复制", tint = BrandBlue)
             }
         }
+        trailing()
     }
 }
 

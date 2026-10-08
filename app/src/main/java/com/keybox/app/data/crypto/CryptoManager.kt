@@ -122,10 +122,16 @@ class CryptoManager(context: Context) {
         return AesGcm.encryptString(plain, key)
     }
 
-    /** 解密字符串字段。 */
+    /** 解密字符串字段。空字符串或解密失败时返回空字符串（容错，避免旧数据/脏数据导致崩溃）。 */
     fun decryptString(encoded: String): String {
+        if (encoded.isEmpty()) return ""
         val key = dek ?: throw IllegalStateException("未解锁")
-        return AesGcm.decryptString(encoded, key)
+        return try {
+            AesGcm.decryptString(encoded, key)
+        } catch (e: Exception) {
+            // 密文损坏或格式非法时返回空字符串，避免单条数据导致整个列表崩溃
+            ""
+        }
     }
 
     /** 锁定：清零内存 DEK。 */

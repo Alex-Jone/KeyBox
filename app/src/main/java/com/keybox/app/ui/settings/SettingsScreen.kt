@@ -26,7 +26,10 @@ fun SettingsScreen(
     appViewModel: AppViewModel,
     onBack: () -> Unit,
     onBackup: () -> Unit,
-    onSecurityCenter: () -> Unit
+    onSecurityCenter: () -> Unit,
+    onOpenTrash: () -> Unit = {},
+    showBack: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
     var showChangePwd by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -37,19 +40,38 @@ fun SettingsScreen(
     val biometricSupported = appViewModel.biometricAvailable(context)
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("设置") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") }
+                    if (showBack) {
+                        IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") }
+                    }
                 }
             )
         }
     ) { padding ->
         Column(
-            Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())
+            modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            // 回收站入口
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("数据管理", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = onOpenTrash,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("回收站")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text("备份与迁移", style = MaterialTheme.typography.titleMedium)
