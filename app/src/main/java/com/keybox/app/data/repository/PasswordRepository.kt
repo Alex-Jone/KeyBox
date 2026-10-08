@@ -249,6 +249,8 @@ class PasswordRepository(
     }
 
     suspend fun deleteTag(id: Long) {
+        // 先删关联，再删标签（不依赖外键 CASCADE，更稳妥）
+        itemTagDao.deleteForTag(id)
         tagDao.delete(id)
     }
 

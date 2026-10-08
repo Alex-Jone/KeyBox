@@ -13,6 +13,9 @@ interface PasswordItemTagDao {
     @Query("DELETE FROM password_item_tag WHERE passwordItemId = :itemId")
     suspend fun deleteForItem(itemId: Long)
 
+    @Query("DELETE FROM password_item_tag WHERE tagId = :tagId")
+    suspend fun deleteForTag(tagId: Long)
+
     @Query("SELECT t.* FROM tag t INNER JOIN password_item_tag pit ON t.id = pit.tagId WHERE pit.passwordItemId = :itemId ORDER BY t.name ASC")
     suspend fun getTagsForItem(itemId: Long): List<TagEntity>
 

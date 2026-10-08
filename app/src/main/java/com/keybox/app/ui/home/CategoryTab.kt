@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Star
@@ -38,6 +39,29 @@ fun CategoryTab(
 
     var expandedCategoryId by remember { mutableStateOf<Long?>(null) }
     var expandedTagId by remember { mutableStateOf<Long?>(null) }
+    var tagToDelete by remember { mutableStateOf<PasswordRepository.Tag?>(null) }
+    val scope = rememberCoroutineScope()
+
+    // 删除标签确认对话框
+    tagToDelete?.let { tag ->
+        AlertDialog(
+            onDismissRequest = { tagToDelete = null },
+            title = { Text("删除标签") },
+            text = { Text("确定要删除标签「${tag.name}」吗？该标签下的账号不会被删除，仅移除关联。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch {
+                        appViewModel.repository.deleteTag(tag.id)
+                        appViewModel.showMessage("标签「${tag.name}」已删除")
+                    }
+                    tagToDelete = null
+                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { tagToDelete = null }) { Text("取消") }
+            }
+        )
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -158,6 +182,13 @@ fun CategoryTab(
                                 )
                             }
                             Spacer(Modifier.weight(1f))
+                            IconButton(onClick = { tagToDelete = tag }) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "删除标签",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                             Icon(
                                 if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                                 null,

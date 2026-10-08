@@ -159,6 +159,11 @@ fun ItemDetailScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
+                            // 用户名
+                            FieldRow(label = "用户名", value = current.username, copyable = true)
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
                             // 密码
                             FieldRow(
                                 label = "密码",
@@ -177,11 +182,6 @@ fun ItemDetailScreen(
                                     Icon(Icons.Default.ContentCopy, "复制密码", tint = BrandBlue)
                                 }
                             }
-
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-
-                            // 用户名
-                            FieldRow(label = "用户名", value = current.username, copyable = true)
 
                             // 网站
                             if (current.url.isNotEmpty()) {
