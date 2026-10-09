@@ -2,11 +2,6 @@ package com.keybox.app.data.backup
 
 import com.keybox.app.data.crypto.CryptoManager
 import com.keybox.app.data.db.PasswordItemEntity
-import org.apache.poi.ss.usermodel.Cell
-import org.apache.poi.ss.usermodel.CellType
-import org.apache.poi.ss.usermodel.DataFormatter
-import org.apache.poi.ss.usermodel.Row
-import org.apache.poi.ss.usermodel.WorkbookFactory
 import java.io.InputStream
 
 /**
@@ -153,56 +148,46 @@ object TextTableImporter {
     // ===== Excel 导入 =====
 
     /**
-     * 解析 Excel（.xlsx / .xls）。首行为表头，按列名匹配字段。
+     * 解析 Excel（.xlsx）。首行为表头，按列名匹配字段。
+     *
+     * 注意：仅支持 .xlsx（新格式）。.xls（老格式）请先在电脑上另存为 .xlsx 或 CSV。
      */
     fun parseExcel(input: InputStream, crypto: CryptoManager): List<PasswordItemEntity> {
         val result = mutableListOf<PasswordItemEntity>()
-        WorkbookFactory.create(input).use { workbook ->
-            val sheet = workbook.getSheetAt(0)
-            if (sheet == null || sheet.physicalNumberOfRows < 2) return result
+        val rows = XlsxParser.parse(input)
+        if (rows.size < 2) return result
 
-            val formatter = DataFormatter()
-            val headerRow = sheet.getRow(0) ?: return result
-            // 建立 列索引 -> 字段key 映射
-            val colMap = mutableMapOf<Int, String>()
-            for (cell in headerRow) {
-                val key = normalize(cellValue(cell, formatter)) ?: continue
-                if (key !in colMap.values) colMap[cell.columnIndex] = key
+        val headerRow = rows[0]
+        // 建立 列索引 -> 字段key 映射
+        val colMap = mutableMapOf<Int, String>()
+        headerRow.forEachIndexed { idx, cell ->
+            val key = cell?.let { normalize(it) } ?: return@forEachIndexed
+            if (key !in colMap.values) colMap[idx] = key
+        }
+        // 至少要识别出 密码 或 账号 列
+        if (KEY_PASS !in colMap.values && KEY_USER !in colMap.values) return result
+
+        for (i in 1 until rows.size) {
+            val row = rows[i]
+            val values = mutableMapOf<String, String>()
+            for ((colIdx, key) in colMap) {
+                val cell = row.getOrNull(colIdx)
+                if (cell != null) values[key] = cell.trim()
             }
-            // 至少要识别出 密码 或 账号 列
-            if (KEY_PASS !in colMap.values && KEY_USER !in colMap.values) return result
-
-            for (i in 1 until sheet.physicalNumberOfRows) {
-                val row: Row = sheet.getRow(i) ?: continue
-                val values = mutableMapOf<String, String>()
-                for ((colIdx, key) in colMap) {
-                    val cell: Cell? = row.getCell(colIdx)
-                    if (cell != null) values[key] = cellValue(cell, formatter).trim()
-                }
-                val name = values[KEY_NAME].orEmpty()
-                    .ifBlank { values[KEY_USER].orEmpty().ifBlank { values[KEY_URL].orEmpty().ifBlank { "未命名" } } }
-                val username = values[KEY_USER].orEmpty()
-                val password = values[KEY_PASS].orEmpty()
-                if (username.isBlank() && password.isBlank()) continue
-                result.add(
-                    buildEntity(
-                        name, values[KEY_URL].orEmpty(), username, password,
-                        values[KEY_EMAIL].orEmpty(), values[KEY_PHONE].orEmpty(), values[KEY_NOTES].orEmpty(),
-                        crypto
-                    )
+            val name = values[KEY_NAME].orEmpty()
+                .ifBlank { values[KEY_USER].orEmpty().ifBlank { values[KEY_URL].orEmpty().ifBlank { "未命名" } } }
+            val username = values[KEY_USER].orEmpty()
+            val password = values[KEY_PASS].orEmpty()
+            if (username.isBlank() && password.isBlank()) continue
+            result.add(
+                buildEntity(
+                    name, values[KEY_URL].orEmpty(), username, password,
+                    values[KEY_EMAIL].orEmpty(), values[KEY_PHONE].orEmpty(), values[KEY_NOTES].orEmpty(),
+                    crypto
                 )
-            }
+            )
         }
         return result
-    }
-
-    private fun cellValue(cell: Cell, formatter: DataFormatter): String {
-        return when (cell.cellType) {
-            CellType.NUMERIC -> formatter.formatCellValue(cell)
-            CellType.BOOLEAN -> cell.booleanCellValue.toString()
-            CellType.FORMULA -> formatter.formatCellValue(cell)
-            else -> cell.stringCellValue
-        }
     }
 
     // ===== 公共 =====

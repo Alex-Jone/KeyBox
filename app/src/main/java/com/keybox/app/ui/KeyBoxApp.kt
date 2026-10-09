@@ -1,6 +1,7 @@
 package com.keybox.app.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.navigation.compose.NavHost
@@ -19,6 +20,14 @@ import com.keybox.app.ui.settings.SecurityCenterScreen
 fun KeyBoxApp(appViewModel: AppViewModel) {
     val state by appViewModel.state.collectAsState()
     val nav = rememberNavController()
+
+    // 锁定（或需要重设主密码）时，强制清空导航栈回到 root，
+    // 避免「状态已锁定但编辑/详情页仍停留在栈顶」导致的解密崩溃。
+    LaunchedEffect(state) {
+        if (state == AppViewModel.AppState.Locked || state == AppViewModel.AppState.NeedsSetup) {
+            nav.popBackStack("root", inclusive = false)
+        }
+    }
 
     NavHost(navController = nav, startDestination = "root") {
         composable("root") {

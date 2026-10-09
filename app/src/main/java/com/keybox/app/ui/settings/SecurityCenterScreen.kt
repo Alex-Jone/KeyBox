@@ -36,6 +36,14 @@ fun SecurityCenterScreen(
     val scope = rememberCoroutineScope()
     var diagStatus by remember { mutableStateOf<String?>(null) }
     var showLogs by remember { mutableStateOf(false) }
+    var showClearConfirm by remember { mutableStateOf(false) }
+    // 日志内容状态（清除后重新读取以刷新显示）
+    var logContent by remember { mutableStateOf<String?>(null) }
+
+    fun refreshLogs() {
+        val app = context.applicationContext as com.keybox.app.KeyBoxApp
+        logContent = app.readCrashLogs()
+    }
 
     // 导出崩溃日志
     val exportLog = rememberLauncherForActivityResult(
@@ -171,7 +179,12 @@ fun SecurityCenterScreen(
             )
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { showLogs = !showLogs }) {
+                OutlinedButton(
+                    onClick = {
+                        showLogs = !showLogs
+                        if (showLogs) refreshLogs()
+                    }
+                ) {
                     Text(if (showLogs) "隐藏日志" else "查看日志")
                 }
                 OutlinedButton(
@@ -182,14 +195,15 @@ fun SecurityCenterScreen(
                 ) {
                     Text("导出日志")
                 }
+                OutlinedButton(onClick = { showClearConfirm = true }) {
+                    Text("清除日志", color = MaterialTheme.colorScheme.error)
+                }
             }
             if (showLogs) {
-                val app = context.applicationContext as com.keybox.app.KeyBoxApp
-                val logs = remember { app.readCrashLogs() }
                 Spacer(Modifier.height(8.dp))
                 Card(Modifier.fillMaxWidth()) {
                     Text(
-                        if (logs.isEmpty()) "暂无崩溃日志" else logs,
+                        if (logContent.isNullOrEmpty()) "暂无崩溃日志" else logContent!!,
                         Modifier.padding(12.dp),
                         style = MaterialTheme.typography.bodySmall,
                         fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
@@ -199,6 +213,27 @@ fun SecurityCenterScreen(
             diagStatus?.let {
                 Spacer(Modifier.height(8.dp))
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+            }
+
+            // 清除日志确认对话框
+            if (showClearConfirm) {
+                AlertDialog(
+                    onDismissRequest = { showClearConfirm = false },
+                    title = { Text("清除日志") },
+                    text = { Text("确定要清除所有崩溃日志吗？此操作不可恢复。") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val app = context.applicationContext as com.keybox.app.KeyBoxApp
+                            app.clearCrashLogs()
+                            logContent = ""
+                            diagStatus = "日志已清除"
+                            showClearConfirm = false
+                        }) { Text("清除", color = MaterialTheme.colorScheme.error) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showClearConfirm = false }) { Text("取消") }
+                    }
+                )
             }
         }
     }

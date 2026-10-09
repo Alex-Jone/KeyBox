@@ -9,6 +9,9 @@ import com.keybox.app.data.repository.PasswordRepository
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class KeyBoxApp : Application() {
 
@@ -33,6 +36,15 @@ class KeyBoxApp : Application() {
         }
     }
 
+    /** 清除全部崩溃日志。 */
+    fun clearCrashLogs() {
+        crashLogDir().listFiles()?.forEach { it.delete() }
+    }
+
+    /** 可读时间格式，用于日志时间戳。 */
+    private fun formatTime(millis: Long): String =
+        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(millis))
+
     override fun onCreate() {
         super.onCreate()
         installCrashLogger()
@@ -49,10 +61,11 @@ class KeyBoxApp : Application() {
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             try {
+                val now = System.currentTimeMillis()
                 val sw = StringWriter()
                 throwable.printStackTrace(PrintWriter(sw))
                 val log = buildString {
-                    append("Time: ").append(System.currentTimeMillis()).append('\n')
+                    append("Time: ").append(formatTime(now)).append('\n')
                     append("Android: ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT).append(")\n")
                     append("Thread: ").append(thread.name).append('\n')
                     append("Exception: ").append(throwable.toString()).append('\n')
@@ -60,7 +73,8 @@ class KeyBoxApp : Application() {
                 }
                 val dir = File(filesDir, "crash_logs")
                 dir.mkdirs()
-                File(dir, "crash_${System.currentTimeMillis()}.txt").writeText(log)
+                val fileName = "crash_" + formatTime(now).replace(":", "-").replace(" ", "_") + ".txt"
+                File(dir, fileName).writeText(log)
                 Log.e("KeyBox", "Crash captured:\n$log")
             } catch (_: Exception) {
                 // 捕获失败不影响默认处理

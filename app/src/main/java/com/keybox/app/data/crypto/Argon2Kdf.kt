@@ -14,15 +14,15 @@ object Argon2Kdf {
     const val SALT_SIZE = 16       // 128-bit
     const val KEY_SIZE = 32        // 256-bit
 
-    // 解锁档：目标 ~500ms
-    private const val MEMORY_UNLOCK = 64 * 1024   // 64 MB (KiB)
+    // 解锁档：保持 64MiB（与既有数据兼容，勿改，否则旧数据无法解锁）
+    private const val MEMORY_UNLOCK = 64 * 1024   // 64 MiB
     private const val ITER_UNLOCK = 3
     private const val PARALLEL_UNLOCK = 4
 
-    // 备份档：目标 2~3s
-    private const val MEMORY_BACKUP = 256 * 1024  // 256 MB
-    private const val ITER_BACKUP = 4
-    private const val PARALLEL_BACKUP = 4
+    // 备份档：从 256MiB 降到 64MiB（Android 默认 256MB heap，256MiB + parallelism=4 会 OOM）
+    private const val MEMORY_BACKUP = 64 * 1024   // 64 MiB
+    private const val ITER_BACKUP = 3
+    private const val PARALLEL_BACKUP = 2
 
     fun randomSalt(): ByteArray = ByteArray(SALT_SIZE).also { SecureRandom().nextBytes(it) }
 

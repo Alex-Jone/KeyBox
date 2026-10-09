@@ -100,7 +100,7 @@ fun BackupScreen(
                     if (text == null) {
                         status = "无法读取文件"
                     } else {
-                        val entities = CsvImporter.parse(text, (context as com.keybox.app.KeyBoxApp).crypto)
+                        val entities = CsvImporter.parse(text, (context.applicationContext as com.keybox.app.KeyBoxApp).crypto)
                         val result = appViewModel.repository.importAll(
                             entities, emptyList(),
                             PasswordRepository.ImportMode.MERGE
@@ -127,7 +127,7 @@ fun BackupScreen(
                     if (text == null) {
                         status = "无法读取文件"
                     } else {
-                        val entities = TextTableImporter.parseTxt(text, (context as com.keybox.app.KeyBoxApp).crypto)
+                        val entities = TextTableImporter.parseTxt(text, (context.applicationContext as com.keybox.app.KeyBoxApp).crypto)
                         if (entities.isEmpty()) {
                             status = "TXT 导入失败：未识别到有效记录。请确认格式为「字段:值」逐行（如 name:/username:/password:），空行分隔不同记录。"
                         } else {
@@ -159,7 +159,7 @@ fun BackupScreen(
                         status = "无法读取文件"
                     } else {
                         val entities = input.use {
-                            TextTableImporter.parseExcel(it, (context as com.keybox.app.KeyBoxApp).crypto)
+                            TextTableImporter.parseExcel(it, (context.applicationContext as com.keybox.app.KeyBoxApp).crypto)
                         }
                         if (entities.isEmpty()) {
                             status = "Excel 导入失败：未识别到有效记录。请确认首行为表头，且包含「密码」或「账号」列。"
@@ -278,7 +278,7 @@ fun BackupScreen(
             Text("从 Excel 导入", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(4.dp))
             Text(
-                "支持 .xlsx / .xls，首行为表头，按列名（名称/网址/账号/密码/邮箱/手机/备注）自动匹配。",
+                "支持 .xlsx（新格式），首行为表头，按列名（名称/网址/账号/密码/邮箱/手机/备注）自动匹配。\n如为 .xls 老格式，请先在电脑上另存为 .xlsx 或 CSV。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary
             )

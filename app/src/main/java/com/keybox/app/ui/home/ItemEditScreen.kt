@@ -311,28 +311,38 @@ fun ItemEditScreen(
             Button(
                 onClick = {
                     if (name.isBlank()) return@Button
-                    scope.launch {
-                        val savedId = appViewModel.repository.saveItem(
-                            PasswordRepository.PasswordItem(
-                                id = itemId,
-                                name = name.trim(),
-                                url = url.trim(),
-                                username = username,
-                                password = password,
-                                email = email,
-                                phone = phone,
-                                notes = notes,
-                                totpSecret = totpSecret.trim(),
-                                favorite = favorite,
-                                categoryId = categoryId,
-                                createdAt = 0,
-                                updatedAt = 0,
-                                lastUsedAt = null
-                            )
-                        )
-                        // 保存标签关联
-                        appViewModel.repository.setItemTags(savedId, selectedTagIds)
+                    // 防御：若应用已锁定（如自动锁定超时），提示而非崩溃
+                    if (!appViewModel.isUnlocked()) {
+                        appViewModel.showMessage("会话已锁定，请重新解锁后再保存")
                         onBack()
+                        return@Button
+                    }
+                    scope.launch {
+                        try {
+                            val savedId = appViewModel.repository.saveItem(
+                                PasswordRepository.PasswordItem(
+                                    id = itemId,
+                                    name = name.trim(),
+                                    url = url.trim(),
+                                    username = username,
+                                    password = password,
+                                    email = email,
+                                    phone = phone,
+                                    notes = notes,
+                                    totpSecret = totpSecret.trim(),
+                                    favorite = favorite,
+                                    categoryId = categoryId,
+                                    createdAt = 0,
+                                    updatedAt = 0,
+                                    lastUsedAt = null
+                                )
+                            )
+                            // 保存标签关联
+                            appViewModel.repository.setItemTags(savedId, selectedTagIds)
+                            onBack()
+                        } catch (e: Exception) {
+                            appViewModel.showMessage("保存失败：${e.message}")
+                        }
                     }
                 },
                 enabled = name.isNotBlank(),
