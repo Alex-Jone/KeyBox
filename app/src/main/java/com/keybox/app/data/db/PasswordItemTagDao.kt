@@ -22,6 +22,12 @@ interface PasswordItemTagDao {
     @Query("SELECT pit.tagId FROM password_item_tag pit WHERE pit.passwordItemId = :itemId")
     suspend fun getTagIdsForItem(itemId: Long): List<Long>
 
+    /** 返回所有「条目 → 标签名」关联（用于搜索时按标签名匹配）。 */
+    @Query("SELECT pit.passwordItemId AS itemId, t.name AS tagName FROM password_item_tag pit INNER JOIN tag t ON t.id = pit.tagId")
+    suspend fun getAllItemTagNames(): List<ItemTagName>
+
+    data class ItemTagName(val itemId: Long, val tagName: String)
+
     @Query("SELECT pi.id FROM password_item pi INNER JOIN password_item_tag pit ON pi.id = pit.passwordItemId WHERE pit.tagId = :tagId AND pi.deletedAt IS NULL")
     suspend fun getItemIdsByTag(tagId: Long): List<Long>
 

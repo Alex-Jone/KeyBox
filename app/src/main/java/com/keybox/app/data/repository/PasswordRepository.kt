@@ -271,6 +271,11 @@ class PasswordRepository(
         }
     }
 
+    /** 获取所有条目 → 标签名列表的映射（用于搜索按标签名匹配）。 */
+    suspend fun getItemTagNameMap(): Map<Long, List<String>> {
+        return itemTagDao.getAllItemTagNames().groupBy({ it.itemId }, { it.tagName })
+    }
+
     // ===== 内部 =====
 
     private fun decrypt(entity: PasswordItemEntity): PasswordItem =

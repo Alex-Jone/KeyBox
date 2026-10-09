@@ -139,13 +139,25 @@ private fun HomeTab(
     val categories by appViewModel.repository.observeCategories().collectAsState(initial = emptyList())
     var query by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<Long?>(null) }
+    // 条目 → 标签名列表（用于搜索按标签名匹配）
+    var tagNameMap by remember { mutableStateOf<Map<Long, List<String>>>(emptyMap()) }
 
-    val filtered = remember(items, query, selectedCategory) {
+    LaunchedEffect(Unit) {
+        tagNameMap = appViewModel.repository.getItemTagNameMap()
+    }
+
+    val filtered = remember(items, query, selectedCategory, tagNameMap) {
         items.filter { item ->
+            val tagMatch = tagNameMap[item.id]?.any { it.contains(query, ignoreCase = true) } == true
             val matchQuery = query.isBlank() ||
+                tagMatch ||
                 item.name.contains(query, ignoreCase = true) ||
                 item.url.contains(query, ignoreCase = true) ||
-                item.username.contains(query, ignoreCase = true)
+                item.username.contains(query, ignoreCase = true) ||
+                item.password.contains(query, ignoreCase = true) ||
+                item.email.contains(query, ignoreCase = true) ||
+                item.phone.contains(query, ignoreCase = true) ||
+                item.notes.contains(query, ignoreCase = true)
             val matchCategory = selectedCategory == null || item.categoryId == selectedCategory
             matchQuery && matchCategory
         }
